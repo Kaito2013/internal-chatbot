@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Internal Chatbot Widget - Integration Example</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      color: #e5e5e5;
+    }
+
+    .demo-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      background: linear-gradient(90deg, #4f46e5, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      margin: 2rem 0 1rem;
+      color: #e5e5e5;
+    }
+
+    p {
+      line-height: 1.7;
+      color: #a1a1aa;
+    }
+
+    .demo-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+    }
+
+    .demo-card h3 {
+      margin: 0 0 16px;
+      color: #4f46e5;
+      font-size: 1.1rem;
+    }
+
+    pre {
+      background: #1a1a1a;
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+      font-size: 13px;
+      line-height: 1.5;
+      border: 1px solid #3d3d3d;
+    }
+
+    code {
+      font-family: 'Fira Code', 'Monaco', monospace;
+    }
+
+    .highlight {
+      color: #818cf8;
+    }
+
+    .comment {
+      color: #6b7280;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 12px 24px;
+      background: #4f46e5;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s ease;
+      margin: 8px 8px 8px 0;
+    }
+
+    .btn:hover {
+      background: #4338ca;
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid #4f46e5;
+      color: #4f46e5;
+    }
+
+    .btn-outline:hover {
+      background: rgba(79, 70, 229, 0.1);
+    }
+
+    .feature-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .feature-list li {
+      padding: 8px 0;
+      padding-left: 24px;
+      position: relative;
+      color: #a1a1aa;
+    }
+
+    .feature-list li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: #4f46e5;
+      font-weight: bold;
+    }
+
+    /* Custom widget styling example */
+    .custom-styled {
+      --cb-accent: #10b981;
+      --cb-accent-hover: #059669;
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-container">
+    <h1>Internal Chatbot Widget</h1>
+    <p>A lightweight, self-contained chat widget for embedding on any website.</p>
+
+    <div class="demo-card">
+      <h3>Features</h3>
+      <ul class="feature-list">
+        <li>Self-contained Vanilla JS (no dependencies)</li>
+        <li>Session management with localStorage</li>
+        <li>Dark theme optimized for modern websites</li>
+        <li>Auth token support via window.chatbotConfig</li>
+        <li>Responsive design with mobile support</li>
+        <li>Public API for external control</li>
+        <li>Accessible (ARIA labels, keyboard support)</li>
+      </ul>
+    </div>
+
+    <h2>Quick Start</h2>
+    
+    <div class="demo-card">
+      <h3>1. Basic Integration</h3>
+      <pre><code><span class="comment">&lt;!-- Add this to your HTML --&gt;</span>
+<span class="highlight">&lt;script </span><span class="highlight">src</span>=<span class="highlight">"widget.js"</span> 
+  <span class="highlight">data-api-url</span>=<span class="highlight">"https://api.yourchatbot.com"</span>
+  <span class="highlight">data-position</span>=<span class="highlight">"right"</span><span class="highlight">&gt;</span>
+<span class="highlight">&lt;/script&gt;</span></code></pre>
+    </div>
+
+    <div class="demo-card">
+      <h3>2. With Configuration</h3>
+      <pre><code><span class="comment">// Set config before widget loads</span>
+<span class="highlight">window.chatbotConfig</span> = {
+  <span class="highlight">authToken</span>: <span class="highlight">'your-jwt-token'</span>,  <span class="comment">// Optional</span>
+  <span class="highlight">email</span>: <span class="highlight">'user@example.com'</span>,     <span class="comment">// Optional</span>
+  <span class="highlight">offset</span>: {                         <span class="comment">// Optional</span>
+    bottom: <span class="highlight">20</span>,
+    right: <span class="highlight">20</span>
+  }
+};
+</code></pre>
+    </div>
+
+    <h2>Public API</h2>
+    
+    <div class="demo-card">
+      <p>Control the widget from your code:</p>
+      <pre><code><span class="comment">// Open the chat widget</span>
+<span class="highlight">window.Chatbot.open</span>();
+
+<span class="comment">// Close the chat widget</span>
+<span class="highlight">window.Chatbot.close</span>();
+
+<span class="comment">// Toggle open/close state</span>
+<span class="highlight">window.Chatbot.toggle</span>();
+
+<span class="comment">// Clear chat history</span>
+<span class="highlight">window.Chatbot.clearHistory</span>();
+
+<span class="comment">// Send a message programmatically</span>
+<span class="highlight">window.Chatbot.sendMessage</span>(<span class="highlight">'Hello!'</span>);
+
+<span class="comment">// Get current session</span>
+<span class="highlight">const session</span> = <span class="highlight">window.Chatbot.getSession</span>();
+</code></pre>
+    </div>
+
+    <div class="demo-card">
+      <h3>Event Listeners</h3>
+      <pre><code><span class="comment">// Listen for messages</span>
+<span class="highlight">window.Chatbot.on</span>(<span class="highlight">'message'</span>, (data) {
+  console.log(<span class="highlight">'New message:'</span>, data);
+});
+
+<span class="comment">// Listen for session creation</span>
+<span class="highlight">window.Chatbot.on</span>(<span class="highlight">'sessionCreate'</span>, (session) {
+  console.log(<span class="highlight">'Session created:'</span>, session.id);
+});
+</code></pre>
+    </div>
+
+    <h2>API Response Format</h2>
+    
+    <div class="demo-card">
+      <p>Your API should return responses in this format:</p>
+      <pre><code>{
+  <span class="highlight">"answer"</span>: <span class="highlight">"The response text from the chatbot"</span>,
+  <span class="highlight">"sources"</span>: [<span class="highlight">"source1"</span>, <span class="highlight">"source2"</span>],
+  <span class="highlight">"used_crm"</span>: <span class="highlight">true</span>
+}
+</code></pre>
+    </div>
+
+    <h2>Custom Styling</h2>
+    
+    <div class="demo-card">
+      <p>Override CSS variables before the widget loads:</p>
+      <pre><code><span class="comment">/* Change accent color */</span>
+<span class="highlight">.chatbot-widget</span> {
+  --cb-accent: <span class="highlight">#10b981</span>;        <span class="comment">/* Green */</span>
+  --cb-accent-hover: <span class="highlight">#059669</span>;
+}
+</code></pre>
+      
+      <p style="margin-top: 16px;">
+        <button class="btn" onclick="window.Chatbot.open()">Open Widget</button>
+        <button class="btn btn-outline" onclick="window.Chatbot.close()">Close Widget</button>
+        <button class="btn btn-outline" onclick="window.Chatbot.clearHistory()">Clear History</button>
+      </p>
+    </div>
+  </div>
+
+  <!-- ============================================
+       CHATBOT WIDGET LOADING
+       ============================================ -->
+  
+  <!-- Configuration (must be before script) -->
+  <script>
+    window.chatbotConfig = {
+      // authToken: 'demo-token', // Uncomment to test auth
+      email: 'demo@example.com'
+    };
+  </script>
+
+  <!-- Widget Script -->
+  <script src="widget.js" data-api-url="http://localhost:3000" data-position="right"></script>
+
+  <!-- ============================================
+       MOCK API SERVER (for demo purposes)
+       Run with: node example.html
+       ============================================ -->
+  <script>
+    // This is a simple mock API for demonstration
+    // In production, your backend would handle these requests
+    
+    const mockResponses = [
+      "Hello! How can I assist you today?",
+      "That's an interesting question. Let me help you with that.",
+      "Based on my knowledge, I can tell you that...",
+      "I've checked our system and found some information for you.",
+      "Is there anything else you'd like to know?",
+      "I'm here to help with any questions you might have."
+    ];
+
+    // Intercept fetch to mock API responses
+    const originalFetch = window.fetch;
+    window.fetch = async function(url, options) {
+      if (typeof url === 'string' && url.includes('/api/chat')) {
+        const body = JSON.parse(options.body);
+        console.log('[Mock API] Received:', body);
+        
+        // Simulate network delay
+        await new Promise(r => setTimeout(r, 1000 + Math.random() * 1000));
+        
+        const response = {
+          answer: mockResponses[Math.floor(Math.random() * mockResponses.length)],
+          sources: ['Documentation', 'Knowledge Base'],
+          used_crm: Math.random() > 0.5
+        };
+        
+        console.log('[Mock API] Sending:', response);
+        return {
+          ok: true,
+          json: () => Promise.resolve(response)
+        };
+      }
+      return originalFetch.apply(this, arguments);
+    };
+
+    console.log('[Demo] Mock API enabled. Start a real server on port 3000 to test actual API.');
+  </script>
+</body>
+</html>

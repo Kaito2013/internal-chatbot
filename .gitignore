@@ -1,0 +1,55 @@
+# Environment
+.env
+*.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Data
+data/documents/*
+data/crawled/*
+data/qdrant/
+data/redis/
+*.xlsx
+*.xls
+*.csv
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.docker/
+
+# Node (if any)
+node_modules/
+
+# Output
+output/
+*.partial.xlsx
+
+# Secrets
+*.pem
+*.key
+credentials.json
