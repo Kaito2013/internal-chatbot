@@ -14,15 +14,55 @@ services:
     env_file:
       - ./backend/.env
     depends_on:
-      - qdrant
-      - redis
+      qdrant:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 40s
+
+  # =====================================================================
+  # PostgreSQL Database (Admin Logs & Metadata)
+  # =====================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: chatbot-postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-chatbot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: ${POSTGRES_DB:-chatbot_admin}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-chatbot} -d ${POSTGRES_DB:-chatbot_admin}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # =====================================================================
+  # Adminer (Lightweight Database Admin UI)
+  # =====================================================================
+  adminer:
+    image: adminer:4.8.1
+    container_name: chatbot-adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    environment:
+      ADMINER_DESIGN: "pepa-linha"
+      ADMINER_PLUGINS: "tables-filter"
 
   # =====================================================================
   # Qdrant Vector Database
@@ -81,6 +121,8 @@ services:
 # Volumes
 # =====================================================================
 volumes:
+  postgres_data:
+    driver: local
   qdrant_data:
     driver: local
   redis_data:

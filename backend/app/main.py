@@ -18,9 +18,12 @@ from .rag.pipeline import RAGPipeline
 from .rag.retriever import HybridRetriever
 from .rag.embedding import AsyncEmbeddingService
 from .db.vector import VectorDB
+from .db.database import init_db, get_db_context
 from .agentic.agent import Agent, AgentMode
 from .agentic.tools import ToolRegistry
 from .crm.factory import CRMClientFactory
+from .admin import router as admin_router
+from .admin.service import log_chat_interaction, get_or_create_session
 
 # ============================================================================
 # Logging
@@ -56,7 +59,7 @@ def create_llm_client(settings) -> Optional[Any]:
     - deepseek: DeepSeek API
     - mock: Mock client cho development
     """
-    provider = settings.llm_provider.lower()
+    provider = settings.LLM_PROVIDER.lower()
     
     try:
         from openai import AsyncOpenAI
@@ -117,6 +120,24 @@ async def lifespan(app: FastAPI):
     global rag_pipeline, agent
     
     logger.info("Initializing services...")
+    
+    # Initialize PostgreSQL database
+    logger.info("Initializing PostgreSQL database...")
+    try:
+        await init_db()
+        logger.info("Database tables created successfully")
+        
+        # Create default admin user
+        async with get_db_context() as db:
+            from .admin.service import ensure_default_admin
+            admin, created = await ensure_default_admin(db)
+            if created:
+                logger.info(f"Created default admin user: {admin.username}")
+            else:
+                logger.info(f"Admin user already exists: {admin.username}")
+    except Exception as e:
+        logger.error(f"Database initialization error: {e}")
+        # Continue without database - some features won't work
     
     # Initialize VectorDB
     vector_db = VectorDB(
@@ -190,6 +211,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Register Admin routes
+app.include_router(admin_router)
 
 # ============================================================================
 # Schemas
@@ -282,7 +306,10 @@ async def chat(
     3. Execute RAG retrieval + generation
     4. Execute CRM tools nếu cần
     5. Return answer với sources
+    6. Log interaction to database (async, non-blocking)
     """
+    import asyncio
+    
     ag = get_agent()
     
     # Validate auth if token provided
@@ -307,6 +334,24 @@ async def chat(
         mode=mode,
     )
     
+    # Log interaction to database (non-blocking)
+    try:
+        asyncio.create_task(_log_chat_async(
+            session_id=req.session_id,
+            user_id=req.user_id,
+            question=req.question,
+            answer=result["answer"],
+            sources=result.get("sources", []),
+            tokens_input=result.get("tokens_input", 0),
+            tokens_output=result.get("tokens_output", 0),
+            model_used=settings.llm_model,
+            mode=req.mode or "HYBRID",
+            used_crm=result.get("used_crm", False),
+            latency_ms=int(result.get("execution_time_ms", 0)),
+        ))
+    except Exception as e:
+        logger.error(f"Failed to log chat interaction: {e}")
+    
     return ChatResponse(
         answer=result["answer"],
         sources=result.get("sources", []),
@@ -314,6 +359,46 @@ async def chat(
         session_id=req.session_id,
         mode=req.mode,
     )
+
+
+async def _log_chat_async(
+    session_id: str,
+    user_id: Optional[str],
+    question: str,
+    answer: str,
+    sources: list,
+    tokens_input: int,
+    tokens_output: int,
+    model_used: str,
+    mode: str,
+    used_crm: bool,
+    latency_ms: int,
+) -> None:
+    """
+    Async helper to log chat interaction to database.
+    Non-blocking so it doesn't slow down the response.
+    """
+    try:
+        async with get_db_context() as db:
+            await log_chat_interaction(
+                db=db,
+                session_id=session_id,
+                user_id=user_id,
+                username=None,
+                question=question,
+                answer=answer,
+                sources=sources,
+                tokens_input=tokens_input,
+                tokens_output=tokens_output,
+                model_used=model_used,
+                mode=mode,
+                used_crm=used_crm,
+                latency_ms=latency_ms,
+            )
+            await db.commit()
+            logger.debug(f"Logged chat interaction: session={session_id}")
+    except Exception as e:
+        logger.error(f"Error logging chat: {e}")
 
 
 @app.post("/api/ingest", response_model=IngestResponse)

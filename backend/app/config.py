@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     # Minimax endpoint (OpenAI-compatible)
     MINIMAX_BASE_URL: str = "https://api.minimax.chat/v1"
     MINIMAX_GROUP_ID: Optional[str] = None
+    
+    # CRM settings
     CRM_PROVIDER: str = "generic"
     CRM_API_URL: str = "https://api.example.com"
     CRM_API_KEY: Optional[str] = None
@@ -53,6 +55,25 @@ class Settings(BaseSettings):
     BACKEND_HOST: str = "0.0.0.0"
     BACKEND_PORT: int = 8000
     CORS_ORIGINS: str = "*"  # Comma-separated origins
+
+    # Database settings (PostgreSQL)
+    POSTGRES_USER: str = "chatbot"
+    POSTGRES_PASSWORD: str = "changeme"
+    POSTGRES_HOST: str = "localhost"
+    POSTGRES_PORT: int = 5432
+    POSTGRES_DB: str = "chatbot_admin"
+    DATABASE_ECHO: bool = False  # SQL echo mode for debugging
+
+    # Admin credentials (thay đổi trong production!)
+    ADMIN_USERNAME: str = "admin"
+    ADMIN_PASSWORD: str = "changeme"
+    ADMIN_SECRET_KEY: str = "your-secret-key-change-in-production"  # JWT secret
+    ADMIN_TOKEN_EXPIRE_HOURS: int = 24
+
+    # File upload settings
+    UPLOAD_DIR: str = "/tmp/chatbot_uploads"
+    MAX_FILE_SIZE_MB: int = 50
+    ALLOWED_EXTENSIONS: str = "txt,md,pdf,docx,html"  # Comma-separated
 
     class Config:
         env_file = ".env"

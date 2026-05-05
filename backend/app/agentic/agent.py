@@ -81,6 +81,8 @@ class AgentResponse:
     success: bool = True
     error: Optional[str] = None
     execution_time_ms: float = 0.0
+    tokens_input: int = 0                 # Input tokens consumed
+    tokens_output: int = 0                # Output tokens consumed
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert sang dict."""
@@ -94,7 +96,9 @@ class AgentResponse:
             "metadata": self.metadata,
             "success": self.success,
             "error": self.error,
-            "execution_time_ms": self.execution_time_ms
+            "execution_time_ms": self.execution_time_ms,
+            "tokens_input": self.tokens_input,
+            "tokens_output": self.tokens_output,
         }
 
 
@@ -208,6 +212,10 @@ class Agent:
         reasoning_steps: List[str] = []
         sources: List[Dict[str, Any]] = []
         
+        # Token tracking
+        total_input_tokens = 0
+        total_output_tokens = 0
+        
         try:
             # === REASONING PHASE ===
             if self.config.mode in [AgentMode.REASONING, AgentMode.HYBRID]:
@@ -230,6 +238,10 @@ class Agent:
                     tools=available_tools,
                     stream=False
                 )
+                
+                # Track tokens from tool calling LLM
+                total_input_tokens += llm_response.get("usage", {}).get("input_tokens", 0)
+                total_output_tokens += llm_response.get("usage", {}).get("output_tokens", 0)
                 
                 # Parse and execute tool calls
                 tool_calls = self._parse_tool_calls(llm_response)
@@ -283,7 +295,12 @@ class Agent:
             )
             
             # Generate final response
-            final_content = await self._generate_response(messages)
+            final_response = await self._call_llm(messages=messages, tools=None, stream=False)
+            final_content = final_response.get("content", "Không có phản hồi từ AI.")
+            
+            # Track tokens from final LLM call
+            total_input_tokens += final_response.get("usage", {}).get("input_tokens", 0)
+            total_output_tokens += final_response.get("usage", {}).get("output_tokens", 0)
             
             # Add assistant response to memory
             self.memory.add_message_to_session(
@@ -306,9 +323,11 @@ class Agent:
                 metadata={
                     "model": self.config.model,
                     "mode": self.config.mode.value,
-                    "tokens_used": 0  # TODO: track tokens
+                    "tokens_used": total_input_tokens + total_output_tokens
                 },
-                execution_time_ms=execution_time
+                execution_time_ms=execution_time,
+                tokens_input=total_input_tokens,
+                tokens_output=total_output_tokens,
             )
             
         except Exception as e:
@@ -324,7 +343,9 @@ class Agent:
                 metadata={},
                 success=False,
                 error=str(e),
-                execution_time_ms=execution_time
+                execution_time_ms=execution_time,
+                tokens_input=total_input_tokens,
+                tokens_output=total_output_tokens,
             )
     
     def _build_messages(
@@ -430,10 +451,19 @@ class Agent:
             else:
                 response = await self._llm_client.chat.completions.create(**request_kwargs)
                 
+                # Extract usage from response (OpenAI-compatible format)
+                usage = {}
+                if hasattr(response, 'usage') and response.usage:
+                    usage = {
+                        "input_tokens": response.usage.prompt_tokens or 0,
+                        "output_tokens": response.usage.completion_tokens or 0,
+                    }
+                
                 return {
                     "content": response.choices[0].message.content,
                     "tool_calls": response.choices[0].message.tool_calls,
-                    "finish_reason": response.choices[0].finish_reason
+                    "finish_reason": response.choices[0].finish_reason,
+                    "usage": usage,
                 }
                 
         except Exception as e:
