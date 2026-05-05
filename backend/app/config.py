@@ -24,12 +24,21 @@ class Settings(BaseSettings):
     CHUNK_OVERLAP: int = 50
 
     # LLM settings (Agentic Layer)
+    LLM_PROVIDER: str = "openai"  # openai | minimax | anthropic | gemini | deepseek | litellm
     LLM_MODEL: str = "gpt-4o-mini"
     LLM_TEMPERATURE: float = 0.1  # Low temp for factual grounding
     MAX_TOKENS: int = 1000
-    LITE_LLM_API_BASE: Optional[str] = None  # Proxy URL cho LiteLLM
-
-    # CRM settings
+    
+    # Provider-specific API keys
+    OPENAI_API_KEY: Optional[str] = None
+    MINIMAX_API_KEY: Optional[str] = None
+    ANTHROPIC_API_KEY: Optional[str] = None
+    GEMINI_API_KEY: Optional[str] = None
+    DEEPSEEK_API_KEY: Optional[str] = None
+    
+    # Minimax endpoint (OpenAI-compatible)
+    MINIMAX_BASE_URL: str = "https://api.minimax.chat/v1"
+    MINIMAX_GROUP_ID: Optional[str] = None
     CRM_PROVIDER: str = "generic"
     CRM_API_URL: str = "https://api.example.com"
     CRM_API_KEY: Optional[str] = None

@@ -41,6 +41,76 @@ rag_pipeline: Optional[RAGPipeline] = None
 agent: Optional[Agent] = None
 
 
+# ============================================================================
+# LLM Client Factory
+# ============================================================================
+
+def create_llm_client(settings) -> Optional[Any]:
+    """
+    Tạo LLM client dựa trên provider được cấu hình.
+    
+    Providers:
+    - openai: OpenAI API (GPT-4, GPT-3.5)
+    - minimax: Minimax API (OpenAI-compatible)
+    - anthropic: Anthropic API (Claude)
+    - deepseek: DeepSeek API
+    - mock: Mock client cho development
+    """
+    provider = settings.llm_provider.lower()
+    
+    try:
+        from openai import AsyncOpenAI
+    except ImportError:
+        logger.warning("openai package not installed, using mock LLM")
+        return None
+    
+    if provider == "openai":
+        if not settings.openai_api_key:
+            logger.warning("OPENAI_API_KEY not set, using mock LLM")
+            return None
+        return AsyncOpenAI(api_key=settings.openai_api_key)
+    
+    elif provider == "minimax":
+        if not settings.minimax_api_key:
+            logger.warning("MINIMAX_API_KEY not set, using mock LLM")
+            return None
+        # Minimax uses OpenAI-compatible endpoint
+        client = AsyncOpenAI(
+            api_key=settings.minimax_api_key,
+            base_url=settings.minimax_base_url,
+        )
+        return client
+    
+    elif provider == "deepseek":
+        if not settings.deepseek_api_key:
+            logger.warning("DEEPSEEK_API_KEY not set, using mock LLM")
+            return None
+        return AsyncOpenAI(
+            api_key=settings.deepseek_api_key,
+            base_url="https://api.deepseek.com/v1",
+        )
+    
+    elif provider == "anthropic":
+        # Anthropic uses different client
+        try:
+            from anthropic import AsyncAnthropic
+            if not settings.anthropic_api_key:
+                logger.warning("ANTHROPIC_API_KEY not set, using mock LLM")
+                return None
+            return AsyncAnthropic(api_key=settings.anthropic_api_key)
+        except ImportError:
+            logger.warning("anthropic package not installed, using mock LLM")
+            return None
+    
+    elif provider == "mock":
+        logger.info("Using mock LLM client")
+        return None
+    
+    else:
+        logger.warning(f"Unknown LLM provider '{provider}', using mock")
+        return None
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Khởi tạo resources khi app start, cleanup khi app shutdown."""
@@ -79,12 +149,16 @@ async def lifespan(app: FastAPI):
     
     # Initialize Tool Registry
     tool_registry = ToolRegistry()
-    
+
+    # Initialize LLM Client (theo provider)
+    llm_client = create_llm_client(settings)
+
     # Initialize Agent
     agent = Agent(
         rag_pipeline=rag_pipeline,
         crm_client=crm_client,
         tool_registry=tool_registry,
+        llm_client=llm_client,
         llm_model=settings.llm_model,
         llm_temperature=settings.llm_temperature,
         max_tokens=settings.max_tokens,

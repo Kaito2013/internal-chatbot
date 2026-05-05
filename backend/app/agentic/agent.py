@@ -112,7 +112,10 @@ class Agent:
         config: Optional[AgentConfig] = None,
         tool_registry: Optional[ToolRegistry] = None,
         memory: Optional[ConversationMemory] = None,
-        llm_client: Optional[Any] = None
+        llm_client: Optional[Any] = None,
+        llm_model: Optional[str] = None,
+        llm_temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
     ):
         """
         Khởi tạo Agent.
@@ -121,9 +124,23 @@ class Agent:
             config: Agent configuration
             tool_registry: Registry chứa các tools
             memory: Conversation memory
-            llm_client: LLM client (OpenAI AsyncClient or compatible)
+            llm_client: OpenAI-compatible async LLM client
+            llm_model: Model name (e.g. "gpt-4o-mini", "MiniMax-Text-01")
+            llm_temperature: Sampling temperature
+            max_tokens: Max output tokens
         """
-        self.config = config or AgentConfig()
+        # Merge config with direct params (direct params take precedence)
+        if config is None:
+            config = AgentConfig()
+        
+        if llm_model is not None:
+            config.model = llm_model
+        if llm_temperature is not None:
+            config.temperature = llm_temperature
+        if max_tokens is not None:
+            config.max_tokens = max_tokens
+        
+        self.config = config
         self.tool_registry = tool_registry or ToolRegistry()
         self.memory = memory or ConversationMemory(self.config.memory_config)
         
@@ -552,3 +569,59 @@ class Agent:
     def is_ready(self) -> bool:
         """Check if agent is ready (has LLM client)."""
         return not self._use_mock_llm
+
+    # Alias for main.py compatibility
+    async def chat(
+        self,
+        question: str,
+        user_id: Optional[str] = None,
+        email: Optional[str] = None,
+        session_id: Optional[str] = None,
+        mode: Optional[AgentMode] = None,
+    ) -> Dict[str, Any]:
+        """
+        Alias for process(). Provided for main.py compatibility.
+        
+        Args:
+            question: User question
+            user_id: Optional user ID
+            email: Optional email
+            session_id: Session ID (auto-generated if None)
+            mode: Agent mode (default: HYBRID)
+            
+        Returns:
+            Dict with answer, sources, used_crm
+        """
+        # Generate session_id if not provided
+        if not session_id:
+            import uuid
+            session_id = f"sess_{uuid.uuid4().hex[:12]}"
+        
+        # Handle optional AgentMode
+        if mode is None:
+            mode = AgentMode.HYBRID
+        elif isinstance(mode, str):
+            mode = AgentMode(mode.lower())
+        
+        # Temporarily set mode if different
+        original_mode = self.config.mode
+        if mode != original_mode:
+            self.config.mode = mode
+        
+        try:
+            result = await self.process(
+                user_input=question,
+                session_id=session_id,
+                user_id=user_id,
+            )
+            
+            # Convert AgentResponse to dict
+            return {
+                "answer": result.content,
+                "sources": result.sources,
+                "used_crm": False,  # Detected by agent internally
+                "session_id": session_id,
+            }
+        finally:
+            if mode != original_mode:
+                self.config.mode = original_mode
